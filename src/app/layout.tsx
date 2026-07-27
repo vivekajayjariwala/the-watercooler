@@ -50,6 +50,9 @@ export default async function RootLayout({
                     <Link href="/dashboard" className="text-sm font-medium hover:text-blue-500 transition-colors">
                       Dashboard
                     </Link>
+                    <Link href="/chat/requests" className="text-sm font-medium hover:text-blue-500 transition-colors">
+                      Coffee Chats
+                    </Link>
                     <Link href="/profile" className="text-sm font-medium hover:text-blue-500 transition-colors">
                       Profile
                     </Link>

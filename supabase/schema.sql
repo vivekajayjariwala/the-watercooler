@@ -92,3 +92,32 @@ $$;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- Create coffee_chats table
+CREATE TABLE public.coffee_chats (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  initiator_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  recipient_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
+  scheduled_time TIMESTAMPTZ,
+  message TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE public.coffee_chats ENABLE ROW LEVEL SECURITY;
+
+-- Coffee Chats Policies
+CREATE POLICY "Users can view chats they are part of."
+  ON public.coffee_chats FOR SELECT
+  USING ( (select auth.uid()) IN (initiator_id, recipient_id) );
+
+CREATE POLICY "Users can insert chats where they are the initiator."
+  ON public.coffee_chats FOR INSERT
+  WITH CHECK ( (select auth.uid()) = initiator_id );
+
+CREATE POLICY "Users can update chats they are part of."
+  ON public.coffee_chats FOR UPDATE
+  USING ( (select auth.uid()) IN (initiator_id, recipient_id) )
+  WITH CHECK ( (select auth.uid()) IN (initiator_id, recipient_id) );
