@@ -1,5 +1,9 @@
 import { login } from './actions'
 import Link from 'next/link'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default async function LoginPage({
   searchParams,
@@ -10,65 +14,55 @@ export default async function LoginPage({
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-sm space-y-8 bg-background p-8 border-thin rounded-md shadow-sm">
-        <div>
-          <h2 className="text-2xl font-semibold text-foreground">
-            Sign in to your account
-          </h2>
-          <p className="mt-2 text-sm text-foreground/70">
-            Or{' '}
-            <Link href="/signup" className="font-medium text-foreground hover:underline">
-              join to create a new profile
-            </Link>
-          </p>
-        </div>
-        
-        {message && (
-          <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm border border-red-200">
-            {message}
-          </div>
-        )}
-
-        <form className="mt-8 space-y-6">
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
-                Email address
-              </label>
-              <input
+      <Card className="w-full max-w-sm rounded-none">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-2xl font-bold tracking-tight">Sign in</CardTitle>
+          <CardDescription>
+            Enter your email and password to access your account
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {message && (
+            <div className="bg-destructive/15 text-destructive p-3 mb-6 text-sm font-medium">
+              {message}
+            </div>
+          )}
+          <form id="login-form" className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
                 id="email"
                 name="email"
                 type="email"
-                autoComplete="email"
+                placeholder="m@example.com"
                 required
-                className="appearance-none block w-full px-3 py-2 border-thin bg-transparent placeholder-foreground/40 text-foreground rounded-md focus:outline-none focus:ring-1 focus:ring-foreground focus:border-foreground sm:text-sm"
+                className="rounded-none"
               />
             </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">
-                Password
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
                 id="password"
                 name="password"
                 type="password"
-                autoComplete="current-password"
                 required
-                className="appearance-none block w-full px-3 py-2 border-thin bg-transparent placeholder-foreground/40 text-foreground rounded-md focus:outline-none focus:ring-1 focus:ring-foreground focus:border-foreground sm:text-sm"
+                className="rounded-none"
               />
             </div>
-          </div>
-
-          <div>
-            <button
-              formAction={login}
-              className="w-full flex justify-center py-2.5 px-4 border-thin rounded-md shadow-sm text-sm font-medium text-accent-foreground bg-accent hover:bg-accent/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-foreground transition-colors"
-            >
-              Sign In
-            </button>
-          </div>
-        </form>
-      </div>
+          </form>
+        </CardContent>
+        <CardFooter className="flex flex-col gap-4">
+          <Button form="login-form" formAction={login} className="w-full rounded-none font-semibold">
+            Sign In
+          </Button>
+          <p className="text-sm text-center text-muted-foreground w-full">
+            Don't have an account?{' '}
+            <Link href="/signup" className="text-primary font-medium hover:underline">
+              Sign up
+            </Link>
+          </p>
+        </CardFooter>
+      </Card>
     </div>
   )
 }

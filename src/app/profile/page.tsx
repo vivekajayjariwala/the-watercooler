@@ -1,6 +1,12 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { updateProfile } from './actions'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -29,92 +35,88 @@ export default async function ProfilePage() {
   const userInterestIds = userInterests?.map((ui) => ui.interest_id) || []
 
   return (
-    <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8 w-full">
-      <div className="bg-background border-thin rounded-md p-8 sm:p-12 shadow-sm">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-8">
-          Your Profile
-        </h1>
+    <div className="container mx-auto py-12 px-4 sm:px-8 max-w-3xl">
+      <Card className="rounded-none">
+        <CardHeader className="space-y-2 border-b mb-8 pb-6">
+          <CardTitle className="text-3xl font-bold">Your Profile</CardTitle>
+          <CardDescription className="text-base">
+            Manage your personal information and select your interests to help coworkers find you.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form id="profile-form" action={updateProfile} className="space-y-10">
+            <input type="hidden" name="user_id" value={user.id} />
 
-        <form action={updateProfile} className="space-y-8">
-          <input type="hidden" name="user_id" value={user.id} />
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  type="text"
+                  name="name"
+                  id="name"
+                  defaultValue={profile?.name || ''}
+                  required
+                  className="rounded-none"
+                />
+              </div>
 
-          <div className="space-y-6">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-foreground mb-2">
-                Full Name
-              </label>
-              <input
-                type="text"
-                name="name"
-                id="name"
-                defaultValue={profile?.name || ''}
-                className="block w-full rounded-sm border-thin bg-transparent px-4 py-2.5 text-foreground focus:border-foreground focus:ring-1 focus:ring-foreground sm:text-sm"
-                required
-              />
+              <div className="space-y-2">
+                <Label htmlFor="title">Job Title</Label>
+                <Input
+                  type="text"
+                  name="title"
+                  id="title"
+                  defaultValue={profile?.title || ''}
+                  className="rounded-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  name="bio"
+                  id="bio"
+                  rows={4}
+                  defaultValue={profile?.bio || ''}
+                  className="rounded-none resize-none"
+                />
+              </div>
             </div>
 
-            <div>
-              <label htmlFor="title" className="block text-sm font-medium text-foreground mb-2">
-                Job Title
-              </label>
-              <input
-                type="text"
-                name="title"
-                id="title"
-                defaultValue={profile?.title || ''}
-                className="block w-full rounded-sm border-thin bg-transparent px-4 py-2.5 text-foreground focus:border-foreground focus:ring-1 focus:ring-foreground sm:text-sm"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="bio" className="block text-sm font-medium text-foreground mb-2">
-                Bio
-              </label>
-              <textarea
-                name="bio"
-                id="bio"
-                rows={4}
-                defaultValue={profile?.bio || ''}
-                className="block w-full rounded-sm border-thin bg-transparent px-4 py-2.5 text-foreground focus:border-foreground focus:ring-1 focus:ring-foreground sm:text-sm resize-none"
-              />
-            </div>
-          </div>
-
-          <div className="pt-8 border-t border-thin mt-8">
-            <h3 className="text-lg font-medium text-foreground mb-6">Interests</h3>
-            <div className="grid grid-cols-2 gap-y-4 gap-x-6 sm:grid-cols-3">
-              {interests?.map((interest) => (
-                <div key={interest.id} className="relative flex items-center">
-                  <div className="flex h-5 items-center">
-                    <input
+            <div className="pt-6 border-t">
+              <div className="mb-6 space-y-2">
+                <h3 className="text-xl font-semibold">Interests</h3>
+                <p className="text-sm text-muted-foreground">Select the topics you enjoy to connect with others.</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-y-4 gap-x-6 sm:grid-cols-3">
+                {interests?.map((interest) => (
+                  <div key={interest.id} className="flex items-center space-x-3">
+                    <Checkbox
                       id={`interest-${interest.id}`}
                       name="interests"
                       value={interest.id}
-                      type="checkbox"
                       defaultChecked={userInterestIds.includes(interest.id)}
-                      className="h-4 w-4 rounded-sm border-thin text-accent-foreground focus:ring-foreground accent-foreground"
+                      className="rounded-none"
                     />
-                  </div>
-                  <div className="ml-3 text-sm">
-                    <label htmlFor={`interest-${interest.id}`} className="font-medium text-foreground/80 cursor-pointer">
+                    <Label
+                      htmlFor={`interest-${interest.id}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
                       {interest.name}
-                    </label>
+                    </Label>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-
-          <div className="pt-8 border-t border-thin mt-8 flex justify-end">
-            <button
-              type="submit"
-              className="inline-flex justify-center rounded-sm border-thin bg-accent px-6 py-2.5 text-sm font-medium text-accent-foreground shadow-sm hover:bg-accent/80 focus:outline-none focus:ring-2 focus:ring-foreground focus:ring-offset-2 transition-colors"
-            >
-              Save Profile
-            </button>
-          </div>
-        </form>
-      </div>
+          </form>
+        </CardContent>
+        <CardFooter className="border-t pt-6 flex justify-end">
+          <Button type="submit" form="profile-form" className="rounded-none font-semibold px-8">
+            Save Profile
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   )
 }

@@ -2,6 +2,10 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { sendChatRequest } from './actions'
 import Link from 'next/link'
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default async function RequestChatPage({
   searchParams,
@@ -35,48 +39,40 @@ export default async function RequestChatPage({
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-12 px-4 sm:px-6 lg:px-8 w-full">
-      <div className="bg-background border-thin rounded-md p-8 sm:p-12 shadow-sm">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-4">
-          Schedule Coffee Chat
-        </h1>
-        <p className="text-foreground/70 mb-8 leading-relaxed">
-          Send a request to connect with <span className="font-medium text-foreground">{recipient.name}</span> over a coffee (or tea).
-        </p>
+    <div className="container mx-auto py-12 px-4 sm:px-8 max-w-2xl">
+      <Card className="rounded-none">
+        <CardHeader className="space-y-2 border-b mb-6 pb-6">
+          <CardTitle className="text-3xl font-bold">Schedule Coffee Chat</CardTitle>
+          <CardDescription className="text-base">
+            Send a request to connect with <span className="font-semibold text-foreground">{recipient.name}</span> over a coffee or tea.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form id="request-form" action={sendChatRequest} className="space-y-6">
+            <input type="hidden" name="initiator_id" value={user.id} />
+            <input type="hidden" name="recipient_id" value={recipient.id} />
 
-        <form action={sendChatRequest} className="space-y-6">
-          <input type="hidden" name="initiator_id" value={user.id} />
-          <input type="hidden" name="recipient_id" value={recipient.id} />
-
-          <div>
-            <label htmlFor="message" className="block text-sm font-medium text-foreground mb-2">
-              Message (Optional)
-            </label>
-            <textarea
-              name="message"
-              id="message"
-              rows={5}
-              placeholder="Hi! I saw we both like Hiking. Would love to grab a coffee and chat about your recent trips."
-              className="block w-full rounded-sm border-thin bg-transparent px-4 py-3 text-foreground placeholder-foreground/40 focus:border-foreground focus:ring-1 focus:ring-foreground sm:text-sm resize-none"
-            />
-          </div>
-
-          <div className="flex justify-end pt-6 space-x-4">
-            <Link
-              href="/dashboard"
-              className="inline-flex justify-center rounded-sm border-thin bg-transparent py-2.5 px-6 text-sm font-medium text-foreground hover:bg-muted/30 focus:outline-none transition-colors"
-            >
-              Cancel
-            </Link>
-            <button
-              type="submit"
-              className="inline-flex justify-center rounded-sm border-thin bg-accent py-2.5 px-6 text-sm font-medium text-accent-foreground shadow-sm hover:bg-accent/80 focus:outline-none focus:ring-2 focus:ring-foreground transition-colors"
-            >
-              Send Request &rarr;
-            </button>
-          </div>
-        </form>
-      </div>
+            <div className="space-y-3">
+              <Label htmlFor="message">Message (Optional)</Label>
+              <Textarea
+                name="message"
+                id="message"
+                rows={5}
+                placeholder="Hi! I saw we both like Hiking. Would love to grab a coffee and chat about your recent trips."
+                className="rounded-none resize-none"
+              />
+            </div>
+          </form>
+        </CardContent>
+        <CardFooter className="flex justify-end space-x-4 border-t pt-6">
+          <Button asChild variant="outline" className="rounded-none px-6">
+            <Link href="/dashboard">Cancel</Link>
+          </Button>
+          <Button type="submit" form="request-form" className="rounded-none px-6 font-semibold">
+            Send Request
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,49 +34,43 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <nav className="bg-background border-b border-thin sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex">
-                <div className="flex-shrink-0 flex items-center">
-                  <Link href="/" className="text-xl font-bold tracking-tight text-foreground">
-                    The Watercooler.
+        <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container mx-auto px-4 sm:px-8 flex h-16 items-center justify-between">
+            <Link href="/" className="font-bold tracking-tighter text-xl">
+              Watercooler
+            </Link>
+            <nav className="flex items-center gap-6">
+              {user ? (
+                <>
+                  <Link href="/dashboard" className="text-sm font-medium transition-colors hover:text-primary">
+                    Dashboard
                   </Link>
-                </div>
-              </div>
-              <div className="flex items-center space-x-6 border-l border-thin pl-6 ml-6">
-                {user ? (
-                  <>
-                    <Link href="/dashboard" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
-                      Dashboard
-                    </Link>
-                    <Link href="/chat/requests" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
-                      Chats
-                    </Link>
-                    <Link href="/profile" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
-                      Profile
-                    </Link>
-                    <form action="/auth/signout" method="post" className="border-l border-thin pl-6 ml-2">
-                      <button type="submit" className="text-sm font-medium text-foreground hover:opacity-70 transition-colors">
-                        Sign Out &rarr;
-                      </button>
-                    </form>
-                  </>
-                ) : (
-                  <>
-                    <Link href="/login" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
-                      Sign In
-                    </Link>
-                    <Link href="/signup" className="text-sm font-medium bg-foreground text-background px-4 py-2 rounded hover:opacity-90 transition-opacity">
-                      Join &rarr;
-                    </Link>
-                  </>
-                )}
-              </div>
-            </div>
+                  <Link href="/chat/requests" className="text-sm font-medium transition-colors hover:text-primary">
+                    Chats
+                  </Link>
+                  <Link href="/profile" className="text-sm font-medium transition-colors hover:text-primary">
+                    Profile
+                  </Link>
+                  <form action="/auth/signout" method="post">
+                    <Button variant="outline" size="sm" type="submit" className="ml-2">
+                      Sign Out
+                    </Button>
+                  </form>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="text-sm font-medium transition-colors hover:text-primary">
+                    Sign In
+                  </Link>
+                  <Button asChild size="sm">
+                    <Link href="/signup">Sign Up</Link>
+                  </Button>
+                </>
+              )}
+            </nav>
           </div>
-        </nav>
-        <main className="flex-grow flex flex-col">
+        </header>
+        <main className="flex-1 flex flex-col">
           {children}
         </main>
       </body>
