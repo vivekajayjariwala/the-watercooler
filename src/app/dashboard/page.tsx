@@ -2,8 +2,10 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
+import { StatCard } from "@/components/StatCard"
+import { ProfileCard } from "@/components/ProfileCard"
+import { EmptyState } from "@/components/EmptyState"
+import { Users, Coffee, Sparkles, FilterX } from "lucide-react"
 
 export default async function DashboardPage({
   searchParams,
@@ -20,8 +22,10 @@ export default async function DashboardPage({
     redirect('/login')
   }
 
-  const { interest } = await searchParams
+  // Fetch current user profile for greeting
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
 
+  const { interest } = await searchParams
   const { data: interests } = await supabase.from('interests').select('*').order('name')
 
   let query = supabase
@@ -53,83 +57,121 @@ export default async function DashboardPage({
     })
   }
 
+  // Calculate simple stats
+  const totalCoworkers = coworkers?.length || 0;
+  const filteredCount = filteredCoworkers.length;
+
   return (
     <div className="container mx-auto py-12 px-4 sm:px-8 max-w-7xl">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 pb-8 border-b">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight">
-            Discover Coworkers
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Find colleagues with shared interests and schedule a chat.
-          </p>
-        </div>
+      
+      {/* Top Section */}
+      <div className="mb-12">
+        <h1 className="text-4xl font-bold tracking-tight mb-2">
+          Good {new Date().getHours() < 12 ? 'morning' : 'afternoon'}, {profile?.name?.split(' ')[0] || 'there'}.
+        </h1>
+        <p className="text-xl text-muted-foreground">Ready for another great conversation?</p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+        <StatCard 
+          title="New Coworkers" 
+          value={totalCoworkers.toString()} 
+          icon={Users} 
+          colorClass="bg-blue-50 text-blue-600" 
+          index={0} 
+        />
+        <StatCard 
+          title="Suggested Matches" 
+          value={Math.min(totalCoworkers, 12).toString()} 
+          icon={Sparkles} 
+          colorClass="bg-purple-50 text-purple-600" 
+          index={1} 
+        />
+        <StatCard 
+          title="Coffee Chats Available" 
+          value="Unlimited" 
+          icon={Coffee} 
+          colorClass="bg-emerald-50 text-emerald-600" 
+          index={2} 
+        />
+      </div>
+
+      {/* Discover Section */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold tracking-tight mb-6">Discover Coworkers</h2>
         
-        <form className="mt-8 md:mt-0 flex items-end space-x-4">
-          <div className="space-y-2">
-            <Label htmlFor="interest-filter">Filter by Interest</Label>
-            <select
-              id="interest-filter"
-              name="interest"
-              defaultValue={interest || ''}
-              className="flex h-10 w-full items-center justify-between rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        {/* Chips Filter */}
+        <div className="flex flex-wrap gap-2 mb-8 p-1">
+          <Link href="/dashboard">
+            <Button 
+              variant={!interest ? "default" : "outline"} 
+              className={`rounded-full px-5 shadow-sm transition-all ${!interest ? 'bg-primary shadow-blue-500/20' : 'bg-white hover:bg-muted'}`}
             >
-              <option value="">All Interests</option>
-              {interests?.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Button type="submit" variant="secondary" className="rounded-none">
-            Filter
-          </Button>
-        </form>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredCoworkers.map((coworker) => (
-          <Card key={coworker.id} className="rounded-none flex flex-col hover:border-foreground transition-colors duration-200">
-            <CardHeader>
-              <CardTitle className="text-xl">{coworker.name || 'Anonymous User'}</CardTitle>
-              <CardDescription>{coworker.title || 'Employee'}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 space-y-4">
-              <p className="text-sm text-foreground/80 leading-relaxed line-clamp-3">
-                {coworker.bio || 'No bio provided.'}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {/* @ts-ignore */}
-                {coworker.user_interests?.map((ui: any) => (
-                  <span
-                    key={ui.interests.id}
-                    className="inline-flex items-center px-2 py-0.5 border text-xs font-medium bg-muted/50 text-foreground"
-                  >
-                    {ui.interests.name}
-                  </span>
-                ))}
-              </div>
-            </CardContent>
-            <CardFooter className="pt-4 border-t">
-              <Button asChild variant="outline" className="w-full rounded-none">
-                <Link href={`/chat/request?to=${coworker.id}`}>
-                  Schedule Chat
-                </Link>
+              All Interests
+            </Button>
+          </Link>
+          {interests?.map((i) => (
+            <Link key={i.id} href={`/dashboard?interest=${i.id}`}>
+              <Button 
+                variant={interest === i.id ? "default" : "outline"} 
+                className={`rounded-full px-5 shadow-sm transition-all ${interest === i.id ? 'bg-primary shadow-blue-500/20' : 'bg-white hover:bg-muted'}`}
+              >
+                {i.name}
               </Button>
-            </CardFooter>
-          </Card>
-        ))}
-
-        {filteredCoworkers.length === 0 && (
-          <div className="col-span-full border border-dashed p-16 flex flex-col items-center justify-center text-center space-y-3">
-            <h3 className="text-xl font-semibold">No coworkers found</h3>
-            <p className="text-muted-foreground">
-              Try adjusting your filters or wait for more coworkers to join.
-            </p>
-          </div>
-        )}
+            </Link>
+          ))}
+        </div>
       </div>
+
+      {/* Profile Grid */}
+      {filteredCoworkers.length > 0 ? (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredCoworkers.map((coworker, index) => {
+            // @ts-ignore
+            const cInterests = coworker.user_interests?.map(ui => ui.interests) || [];
+            return (
+              <ProfileCard 
+                key={coworker.id}
+                id={coworker.id}
+                name={coworker.name || ""}
+                title={coworker.title || ""}
+                avatarUrl={coworker.avatar_url || ""}
+                interests={cInterests}
+                index={index}
+              />
+            )
+          })}
+        </div>
+      ) : (
+        <div className="py-12 bg-white rounded-3xl border border-border/50 shadow-sm">
+          <EmptyState 
+            icon={FilterX}
+            title="Looks a little quiet..."
+            description="We couldn't find anyone with that exact interest. Try adjusting your filters or invite more teammates."
+            primaryAction={{
+              label: "Invite teammates",
+              onClick: () => {} // In a real app this would open a modal
+            }}
+            secondaryAction={
+              interest ? {
+                label: "Clear filters",
+                onClick: () => {} // Controlled via Link usually, but for EmptyState it's just visual. 
+                // We'll wrap the button in a Link below instead of relying on onClick
+              } : undefined
+            }
+          />
+          {interest && (
+            <div className="flex justify-center -mt-6">
+              <Link href="/dashboard">
+                <Button variant="secondary" size="lg" className="rounded-xl relative z-10">
+                  Clear filters
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
