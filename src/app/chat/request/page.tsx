@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { sendChatRequest } from './actions'
+import Link from 'next/link'
 
 export default async function RequestChatPage({
   searchParams,
@@ -23,7 +24,6 @@ export default async function RequestChatPage({
     redirect('/dashboard')
   }
 
-  // Fetch recipient profile
   const { data: recipient } = await supabase
     .from('profiles')
     .select('*')
@@ -35,13 +35,13 @@ export default async function RequestChatPage({
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-      <div className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl p-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+    <div className="max-w-2xl mx-auto py-12 px-4 sm:px-6 lg:px-8 w-full">
+      <div className="bg-background border-thin rounded-md p-8 sm:p-12 shadow-sm">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-4">
           Schedule Coffee Chat
         </h1>
-        <p className="text-gray-500 dark:text-gray-400 mb-8">
-          Send a request to connect with <span className="font-semibold text-gray-700 dark:text-gray-200">{recipient.name}</span> over a coffee (or tea!).
+        <p className="text-foreground/70 mb-8 leading-relaxed">
+          Send a request to connect with <span className="font-medium text-foreground">{recipient.name}</span> over a coffee (or tea).
         </p>
 
         <form action={sendChatRequest} className="space-y-6">
@@ -49,30 +49,30 @@ export default async function RequestChatPage({
           <input type="hidden" name="recipient_id" value={recipient.id} />
 
           <div>
-            <label htmlFor="message" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="message" className="block text-sm font-medium text-foreground mb-2">
               Message (Optional)
             </label>
             <textarea
               name="message"
               id="message"
-              rows={4}
+              rows={5}
               placeholder="Hi! I saw we both like Hiking. Would love to grab a coffee and chat about your recent trips."
-              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 bg-transparent focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              className="block w-full rounded-sm border-thin bg-transparent px-4 py-3 text-foreground placeholder-foreground/40 focus:border-foreground focus:ring-1 focus:ring-foreground sm:text-sm resize-none"
             />
           </div>
 
-          <div className="flex justify-end pt-4 space-x-4">
-            <a
+          <div className="flex justify-end pt-6 space-x-4">
+            <Link
               href="/dashboard"
-              className="inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2 px-4 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+              className="inline-flex justify-center rounded-sm border-thin bg-transparent py-2.5 px-6 text-sm font-medium text-foreground hover:bg-muted/30 focus:outline-none transition-colors"
             >
               Cancel
-            </a>
+            </Link>
             <button
               type="submit"
-              className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+              className="inline-flex justify-center rounded-sm border-thin bg-accent py-2.5 px-6 text-sm font-medium text-accent-foreground shadow-sm hover:bg-accent/80 focus:outline-none focus:ring-2 focus:ring-foreground transition-colors"
             >
-              Send Request
+              Send Request &rarr;
             </button>
           </div>
         </form>

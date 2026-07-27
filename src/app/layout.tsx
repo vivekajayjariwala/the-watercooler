@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { createClient } from "@/utils/supabase/server";
+import Link from "next/link";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,9 +19,6 @@ export const metadata: Metadata = {
   description: "Connect with your coworkers over shared interests.",
 };
 
-import { createClient } from "@/utils/supabase/server";
-import Link from "next/link";
-
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -33,39 +32,44 @@ export default async function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-        <nav className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <nav className="bg-background border-b border-thin sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16">
               <div className="flex">
                 <div className="flex-shrink-0 flex items-center">
-                  <Link href="/" className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-teal-400">
-                    💧 The Watercooler
+                  <Link href="/" className="text-xl font-bold tracking-tight text-foreground">
+                    The Watercooler.
                   </Link>
                 </div>
               </div>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-6 border-l border-thin pl-6 ml-6">
                 {user ? (
                   <>
-                    <Link href="/dashboard" className="text-sm font-medium hover:text-blue-500 transition-colors">
+                    <Link href="/dashboard" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
                       Dashboard
                     </Link>
-                    <Link href="/chat/requests" className="text-sm font-medium hover:text-blue-500 transition-colors">
-                      Coffee Chats
+                    <Link href="/chat/requests" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
+                      Chats
                     </Link>
-                    <Link href="/profile" className="text-sm font-medium hover:text-blue-500 transition-colors">
+                    <Link href="/profile" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
                       Profile
                     </Link>
-                    <form action="/auth/signout" method="post">
-                      <button type="submit" className="text-sm font-medium hover:text-red-500 transition-colors">
-                        Sign Out
+                    <form action="/auth/signout" method="post" className="border-l border-thin pl-6 ml-2">
+                      <button type="submit" className="text-sm font-medium text-foreground hover:opacity-70 transition-colors">
+                        Sign Out &rarr;
                       </button>
                     </form>
                   </>
                 ) : (
-                  <Link href="/login" className="text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors shadow-sm">
-                    Sign In
-                  </Link>
+                  <>
+                    <Link href="/login" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
+                      Sign In
+                    </Link>
+                    <Link href="/signup" className="text-sm font-medium bg-foreground text-background px-4 py-2 rounded hover:opacity-90 transition-opacity">
+                      Join &rarr;
+                    </Link>
+                  </>
                 )}
               </div>
             </div>
