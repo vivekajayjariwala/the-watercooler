@@ -1,50 +1,110 @@
-# 💧 The Watercooler
+# Watercooler
 
-Welcome to The Watercooler – a modern web application designed to help employees connect over shared interests and schedule coffee chats. This project is a complete rewrite of a 2022 hackathon project, now built with:
+Watercooler pairs coworkers for coffee chats based on what they actually care
+about. Profiles are embedded with a sentence-transformer model and compared by
+cosine similarity in Postgres, so people are matched on meaning rather than on
+overlapping keywords or who happens to sit nearby.
 
-- **Next.js (App Router)**
-- **Tailwind CSS**
-- **Supabase (Auth & Database)**
-- **Vercel (Deployment)**
+Originally a 2022 hackathon project; this is a full rewrite.
 
-## 🚀 Getting Started
+## Stack
 
-### 1. Database Setup (Supabase)
-To run this project, you will need a Supabase project.
+| Layer | Choice |
+| --- | --- |
+| Framework | Next.js 16 (App Router, Server Components, Server Actions) |
+| Database | Supabase Postgres + `pgvector`, RLS on every table |
+| Auth | Supabase Auth (email + password) |
+| Realtime | Supabase Realtime (messages, notifications, chats) |
+| Embeddings | Hugging Face Inference API — `sentence-transformers/all-MiniLM-L6-v2` (384-dim) |
+| Styling | Tailwind v4 + shadcn (base-ui), Geist Sans / Geist Mono |
 
-1. Create a new project on [Supabase](https://supabase.com).
-2. Go to the **SQL Editor** in your Supabase dashboard.
-3. Open the `supabase/schema.sql` file in this repository.
-4. Copy the entire contents of `schema.sql` and run it in the Supabase SQL Editor. This will create the necessary tables (`profiles`, `interests`, `user_interests`, `coffee_chats`), enable Row Level Security (RLS), insert default interests, and create an auth trigger.
-
-### 2. Environment Variables
-Create a `.env.local` file in the root of the project and add your Supabase keys (found in Project Settings -> API):
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-```
-
-### 3. Run Locally
-Install dependencies and run the development server:
+## Setup
 
 ```bash
 npm install
+cp .env.example .env.local     # then fill in the values
+```
+
+`.env.local` needs:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable key>
+HF_TOKEN=hf_...                # server-only, never NEXT_PUBLIC_
+```
+
+Apply the schema and seed demo people:
+
+```bash
+export DATABASE_URL='postgresql://postgres:<password>@db.<project>.supabase.co:5432/postgres'
+npm run db:migrate
+npm run db:seed                # 12 demo profiles, real embeddings
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+The seed creates 12 demo accounts (`*@watercooler.demo`), all with the password
+`watercooler2026`, so you can sign in as different people and exercise matching,
+requests, and messaging from both sides.
 
-## 📦 Deployment (Vercel)
+Without `HF_TOKEN` the app still runs — matching degrades to shared-interest
+overlap and the UI says so.
 
-This project is optimized for deployment on Vercel.
+## How matching works
 
-1. Push your code to GitHub.
-2. Go to [Vercel](https://vercel.com) and click **Add New... > Project**.
-3. Import your GitHub repository.
-4. In the **Environment Variables** section, add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-5. Click **Deploy**.
+1. On profile save, the free-text fields (`bio`, `working_on`, `curious_about`,
+   `fun_fact`, `headline`, `department`, `location`) plus the user's interests
+   are flattened into a single labelled string by `buildProfileText()`.
+2. That string is embedded via the HF Inference API and stored in
+   `profiles.embedding` (`vector(384)`, HNSW index, cosine ops).
+3. `syncProfileEmbedding()` compares the newly-built string against the stored
+   `embedding_source` and skips the API call when nothing meaningful changed.
+4. The `match_profiles()` RPC ranks candidates next to the index, blending
+   **82% calibrated semantic similarity** with **18% shared-interest overlap**.
 
-## 🕰️ Legacy Code
+### Score calibration
 
-The original 2022 hackathon code is preserved in the `legacy_code` directory for nostalgia. It is completely isolated from the new Next.js application.
+MiniLM does not use the full cosine range on prose like this. Measured across
+every pair in the seed set:
+
+```
+min 0.185 | p05 0.300 | p50 0.456 | p95 0.586 | max 0.619
+```
+
+Showing raw cosine meant a *best possible* match displayed as "62%", with
+everything bunched into an undifferentiated 40–60% band. `0002_calibrate_match_scoring.sql`
+stretches the band the model actually uses onto `[0.15, 0.95]` before blending in
+the interest bonus. Ordering is unchanged; the number is just honest now. The
+floor and ceiling are deliberate — nothing reads as 0% or 100%.
+
+## Layout
+
+```
+src/
+  app/
+    (auth)/          login, signup
+    (app)/           signed-in shell: discover, people, chats, profile, settings, notifications
+    onboarding/      multi-step wizard that feeds the embedding model
+    auth/            callback + signout routes
+    page.tsx         marketing landing
+  components/
+    kit/             shared primitives (avatar, score badge, empty state, …)
+    shell/           nav, logo, theme toggle
+    ui/              shadcn (base-ui) primitives
+  lib/
+    embeddings.ts    HF client + profile text builder
+    matching.ts      embedding sync, match queries, explanations
+    session.ts       auth + onboarding gates
+    types.ts         row shapes, mirrors the SQL
+  proxy.ts           session refresh + route guards (Next 16 renamed middleware → proxy)
+supabase/
+  migrations/        applied in filename order
+  seed/              demo personas + seed script
+docs/DESIGN.md       design system and build conventions — read before writing UI
+```
+
+## Notes
+
+- `docs/DESIGN.md` is the source of truth for visual conventions.
+- Notification rows are written by database triggers; never insert them from
+  application code.
+- `messages` inserts are rejected by RLS unless the parent chat is `accepted`.

@@ -1,5 +1,6 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
+import Link from "next/link"
 
 import { cn } from "@/lib/utils"
 
@@ -55,4 +56,27 @@ function Button({
   )
 }
 
-export { Button, buttonVariants }
+/**
+ * A link that looks like a button.
+ *
+ * Base UI's `Button` assumes a native `<button>`; feeding it a `<Link>` through
+ * `render` trips its `nativeButton` assertion, and opting out with
+ * `nativeButton={false}` would stamp `role="button"` onto something that
+ * navigates. Navigation stays a real `<a>` — the variants are just styling.
+ */
+function ButtonLink({
+  className,
+  variant = "default",
+  size = "default",
+  ...props
+}: React.ComponentProps<typeof Link> & VariantProps<typeof buttonVariants>) {
+  return (
+    <Link
+      data-slot="button"
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    />
+  )
+}
+
+export { Button, ButtonLink, buttonVariants }

@@ -1,11 +1,14 @@
-import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
+import { createClient } from '@/utils/supabase/server'
 
-export async function POST(req: NextRequest) {
+/**
+ * Sign out. POST only — a GET route here would let any `<img src>` on the
+ * internet log people out of the app.
+ */
+export async function POST(request: NextRequest) {
   const supabase = await createClient()
 
-  // Check if a user's logged in
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -14,8 +17,9 @@ export async function POST(req: NextRequest) {
     await supabase.auth.signOut()
   }
 
+  // Every layout above reads the session, so the whole tree is stale now.
   revalidatePath('/', 'layout')
-  return NextResponse.redirect(new URL('/login', req.url), {
-    status: 302,
-  })
+
+  // 303 so the browser follows with GET instead of re-POSTing to `/`.
+  return NextResponse.redirect(new URL('/', request.url), { status: 303 })
 }
