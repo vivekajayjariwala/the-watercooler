@@ -49,6 +49,11 @@ export function FilterBar({
             aria-hidden
           />
           <Input
+            // Remount when the URL's query changes, so the box tracks the
+            // address bar. Reusing the instance would mean a `defaultValue`
+            // that moves after mount, which Base UI warns about and which
+            // wouldn't update the box anyway.
+            key={params.query}
             type="search"
             name="q"
             defaultValue={params.query}

@@ -1,19 +1,17 @@
 'use client'
 
 import { useTheme } from 'next-themes'
-import { useEffect, useState } from 'react'
 import { Moon, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useHydrated } from '@/lib/use-hydrated'
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
+  const hydrated = useHydrated()
 
-  // The server can't know the resolved theme, so render a neutral placeholder
-  // until hydration rather than flashing the wrong icon.
-  useEffect(() => setMounted(true), [])
-
-  if (!mounted) {
+  // The server can't know the resolved theme, so hold a neutral placeholder of
+  // the same size until hydration rather than flashing the wrong icon.
+  if (!hydrated) {
     return <div className="size-8" aria-hidden />
   }
 

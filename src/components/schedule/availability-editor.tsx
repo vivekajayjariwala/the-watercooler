@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { saveAvailability, type ScheduleState } from './actions'
 import {
   AVAILABILITY_PRESETS,
-  CELLS_PER_DAY,
   CELL_MINUTES,
   DAYS_PER_WEEK,
   WEEKDAY_SHORT,
@@ -43,11 +42,9 @@ const ROW_COUNT = ((LAST_HOUR - FIRST_HOUR) * 60) / CELL_MINUTES
  * different zones.
  */
 export function AvailabilityEditor({
-  userId,
   timezone,
   slots,
 }: {
-  userId: string
   timezone: string
   slots: AvailabilitySlot[]
 }) {
@@ -65,7 +62,15 @@ export function AvailabilityEditor({
   // selection doesn't flicker between adding and removing.
   const painting = useRef<'add' | 'remove' | null>(null)
 
-  useEffect(() => setCells(initialCells), [initialCells])
+  // Saving revalidates `/settings`, which hands this component a fresh `slots`
+  // prop and so a fresh `initialCells`. Rebasing the grid on it during render
+  // is React's documented way to reset state when a prop changes — an effect
+  // would paint the stale grid for a frame first.
+  const [rebasedFrom, setRebasedFrom] = useState(initialCells)
+  if (rebasedFrom !== initialCells) {
+    setRebasedFrom(initialCells)
+    setCells(initialCells)
+  }
 
   useEffect(() => {
     if (state.status === 'success') toast.success(state.message)

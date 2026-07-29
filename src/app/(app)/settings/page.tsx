@@ -55,7 +55,6 @@ export default async function SettingsPage() {
         description="Paint the windows you're generally free for a coffee. We only ever suggest times you and the other person both marked."
       >
         <AvailabilityEditor
-          userId={user.id}
           timezone={timezone}
           slots={(slots ?? []) as AvailabilitySlot[]}
         />

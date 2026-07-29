@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useId, useState } from 'react'
+import { useId, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Coffee } from 'lucide-react'
@@ -46,39 +46,48 @@ export function RequestChatDialog({
   trigger: React.ReactNode
 }) {
   const [open, setOpen] = useState(false)
-  const [state, formAction] = useActionState(requestChat, INITIAL)
   const messageId = useId()
   const [message, setMessage] = useState('')
   const router = useRouter()
 
   const firstName = recipientName?.trim().split(/\s+/)[0] ?? 'them'
 
-  useEffect(() => {
-    if (state.status === 'idle') return
+  /**
+   * An async `action` rather than `useActionState`, because everything that
+   * happens after a send — the toast, closing the dialog, clearing the draft —
+   * belongs to the submit that caused it. Routed through `useActionState` the
+   * result arrives as a state change instead, and the only place left to react
+   * to it is an effect that fires on every result the component has ever seen.
+   *
+   * `useFormStatus` inside `SubmitButton` still reports pending for as long as
+   * this promise is outstanding, so the button behaves exactly as before.
+   */
+  async function send(formData: FormData) {
+    const result = await requestChat(INITIAL, formData)
 
-    if (state.status === 'success') {
-      toast.success(`Your request is on its way to ${state.recipientName}.`, {
-        action: { label: 'View', onClick: () => router.push(`/chats/${state.chatId}`) },
+    if (result.status === 'success') {
+      toast.success(`Your request is on its way to ${result.recipientName}.`, {
+        action: { label: 'View', onClick: () => router.push(`/chats/${result.chatId}`) },
       })
       setOpen(false)
       setMessage('')
       return
     }
 
-    if (state.status === 'duplicate') {
-      toast(`You already have an open chat with ${state.recipientName}.`)
+    if (result.status === 'duplicate') {
+      toast(`You already have an open chat with ${result.recipientName}.`)
       setOpen(false)
       return
     }
 
-    if (state.status === 'unavailable') {
-      toast(`${state.recipientName} isn't taking requests right now.`)
+    if (result.status === 'unavailable') {
+      toast(`${result.recipientName} isn't taking requests right now.`)
       setOpen(false)
       return
     }
 
-    toast.error(state.message)
-  }, [state, router])
+    if (result.status === 'error') toast.error(result.message)
+  }
 
   // A placeholder that names something real gives people a first line to
   // steal, which is most of the reason a request ever gets sent.
@@ -119,7 +128,7 @@ export function RequestChatDialog({
           </div>
         )}
 
-        <form action={formAction} className="space-y-3">
+        <form action={send} className="space-y-3">
           <input type="hidden" name="recipientId" value={recipientId} />
           <input type="hidden" name="score" value={score} />
 

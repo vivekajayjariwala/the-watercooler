@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
-import { requireProfile } from '@/lib/session'
+import { getSession, requireProfile } from '@/lib/session'
 import { getThread, statusLabel } from '@/components/chat/data'
 import { MessageThread } from '@/components/chat/message-thread'
 import { SchedulePanel } from '@/components/schedule/schedule-panel'
@@ -12,12 +12,23 @@ import { SubmitButton } from '@/components/kit/submit-button'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { respondToRequest, withdrawRequest } from '../actions'
 
+/**
+ * `getSession` and `getThread` are both `cache`d, so naming the other person
+ * here costs nothing the page wasn't already paying. No redirect on a missing
+ * session — the layout's `requireProfile` owns that, and metadata shouldn't be
+ * the thing that decides where someone lands.
+ */
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
-  return { title: 'Chat' }
+  const { id } = await params
+  const session = await getSession()
+  if (!session) return { title: 'Chat' }
+
+  const thread = await getThread(id, session.user.id)
+  return { title: thread ? `Chat with ${thread.other.full_name ?? 'someone'}` : 'Chat' }
 }
 
 export default async function ThreadPage({

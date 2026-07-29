@@ -2,8 +2,17 @@
 
 import { useActionState, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { CalendarPlus, Check, Clock, Download, MapPin, Video, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import {
+  CalendarPlus,
+  Check,
+  Clock,
+  Download,
+  ExternalLink,
+  MapPin,
+  Video,
+  X,
+} from 'lucide-react'
+import { Button, ButtonLink } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { SubmitButton } from '@/components/kit/submit-button'
 import {
@@ -13,7 +22,8 @@ import {
   unscheduleChat,
   type ScheduleState,
 } from './actions'
-import { buildIcs, downloadIcs } from './ics'
+import { buildIcs, downloadIcs, googleCalendarUrl } from './ics'
+import { DateTimePicker } from './date-time-picker'
 import { formatZonedDateTime, zoneCityLabel, sameWallClock } from '@/lib/availability'
 import { cn } from '@/lib/utils'
 import type { ChatTimeProposal, LocationKind } from '@/lib/types'
@@ -55,7 +65,6 @@ export function SchedulePanelClient({
   const [proposeState, proposeAction] = useActionState(proposeTimes, IDLE)
   const [acceptState, acceptAction] = useActionState(acceptProposal, IDLE)
   const [picked, setPicked] = useState<string[]>([])
-  const [manual, setManual] = useState('')
   const [duration, setDuration] = useState<number>(durationMinutes)
   const [kind, setKind] = useState<LocationKind>(locationKind)
   const [detail, setDetail] = useState(locationDetail ?? '')
@@ -74,6 +83,16 @@ export function SchedulePanelClient({
   if (scheduledAt) {
     const start = new Date(scheduledAt)
     const showTheirTime = !sameWallClock(start, myZone, theirZone)
+
+    // One description of the event, so the .ics and the Google link can never
+    // disagree about what they are adding.
+    const event = {
+      start,
+      durationMinutes,
+      title: `Coffee with ${otherUserName ?? 'a colleague'}`,
+      description: 'Arranged through Watercooler.',
+      location: locationDetail ?? (kind === 'virtual' ? 'Virtual' : undefined),
+    }
 
     return (
       <section className="surface space-y-3 p-4">
@@ -113,20 +132,26 @@ export function SchedulePanelClient({
             onClick={() =>
               downloadIcs(
                 `coffee-with-${firstName.toLowerCase()}`,
-                buildIcs({
-                  uid: chatId,
-                  start,
-                  durationMinutes,
-                  title: `Coffee with ${otherUserName ?? 'a colleague'}`,
-                  description: 'Arranged through Watercooler.',
-                  location: locationDetail ?? (kind === 'virtual' ? 'Virtual' : undefined),
-                })
+                buildIcs({ uid: chatId, ...event })
               )
             }
           >
             <Download className="size-3.5" />
-            Add to calendar
+            Download .ics
           </Button>
+
+          {/* Opens Google's prefilled compose screen; saving is still theirs. */}
+          <ButtonLink
+            variant="outline"
+            size="sm"
+            href={googleCalendarUrl(event)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <CalendarPlus className="size-3.5" />
+            Google Calendar
+            <ExternalLink className="size-3 text-muted-foreground" aria-hidden />
+          </ButtonLink>
 
           <form action={unscheduleChat}>
             <input type="hidden" name="chatId" value={chatId} />
@@ -140,6 +165,8 @@ export function SchedulePanelClient({
   }
 
   /* --- Not yet scheduled -------------------------------------------------- */
+  const atCapacity = picked.length >= 3
+
   const toggle = (iso: string) =>
     setPicked((current) =>
       current.includes(iso)
@@ -148,6 +175,19 @@ export function SchedulePanelClient({
           ? current
           : [...current, iso]
     )
+
+  function addManualTime(iso: string) {
+    if (new Date(iso).getTime() <= Date.now()) {
+      toast.error('That time has already passed.')
+      return
+    }
+    if (picked.includes(iso)) {
+      toast('That time is already on the list.')
+      return
+    }
+
+    toggle(iso)
+  }
 
   return (
     <section className="surface space-y-4 p-4">
@@ -247,9 +287,12 @@ export function SchedulePanelClient({
                     key={iso}
                     type="button"
                     aria-pressed={selected}
+                    // Three is the cap. Without this the fourth click is a
+                    // no-op with no explanation for why.
+                    disabled={atCapacity && !selected}
                     onClick={() => toggle(iso)}
                     className={cn(
-                      'rounded-md border px-2 py-1 font-mono text-[11px] tabular transition-colors',
+                      'rounded-md border px-2 py-1 font-mono text-[11px] tabular transition-colors disabled:pointer-events-none disabled:opacity-40',
                       selected
                         ? 'border-foreground bg-foreground text-background'
                         : 'border-border text-muted-foreground hover:border-border-strong hover:text-foreground'
@@ -263,34 +306,45 @@ export function SchedulePanelClient({
           )}
         </div>
 
-        <div className="flex items-end gap-2">
-          <div className="flex-1 space-y-1">
-            <label htmlFor="manual-time" className="label-mono">
-              Or pick a time
-            </label>
-            <Input
-              id="manual-time"
-              type="datetime-local"
-              value={manual}
-              onChange={(event) => setManual(event.target.value)}
-            />
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            disabled={!manual}
-            onClick={() => {
-              const date = new Date(manual)
-              if (Number.isNaN(date.getTime())) return
-              toggle(date.toISOString())
-              setManual('')
-            }}
-          >
-            <CalendarPlus className="size-3.5" />
-            Add
-          </Button>
+        <div className="space-y-1.5">
+          <p className="label-mono">Or pick a time</p>
+          <DateTimePicker
+            defaultZone={myZone}
+            theirZone={theirZone}
+            disabled={atCapacity}
+            onAdd={addManualTime}
+          />
         </div>
+
+        {picked.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="label-mono">Sending {picked.length} of 3</p>
+            <div className="space-y-1">
+              {[...picked]
+                .sort()
+                .map((iso) => (
+                  <div
+                    key={iso}
+                    className="flex items-center justify-between gap-2 rounded-md border border-border py-1 pr-1 pl-2"
+                  >
+                    <span className="min-w-0 truncate font-mono text-[11px] tabular">
+                      {formatZonedDateTime(new Date(iso), myZone)}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label={`Remove ${formatZonedDateTime(new Date(iso), myZone)}`}
+                      className="shrink-0 text-muted-foreground"
+                      onClick={() => setPicked((current) => current.filter((v) => v !== iso))}
+                    >
+                      <X className="size-3" />
+                    </Button>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1">

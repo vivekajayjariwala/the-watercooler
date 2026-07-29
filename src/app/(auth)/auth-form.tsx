@@ -38,15 +38,27 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   )
 }
 
+/**
+ * Controlled on purpose.
+ *
+ * React resets uncontrolled inputs once a `<form action>` resolves, and Base UI
+ * warns if `defaultValue` changes after mount — which is exactly what feeding a
+ * server-echoed value back through `defaultValue` does. Holding the value in
+ * client state survives the reset without either problem.
+ */
 function TextField({
   label,
   name,
+  value,
+  onValueChange,
   error,
   hint,
   ...props
-}: React.ComponentProps<typeof Input> & {
+}: Omit<React.ComponentProps<typeof Input>, 'value' | 'onChange'> & {
   label: string
   name: AuthField
+  value: string
+  onValueChange: (next: string) => void
   error?: string
   hint?: string
 }) {
@@ -64,6 +76,8 @@ function TextField({
       <Input
         id={id}
         name={name}
+        value={value}
+        onChange={(event) => onValueChange(event.target.value)}
         className="h-9"
         aria-invalid={Boolean(error) || undefined}
         aria-describedby={errorId}
@@ -180,6 +194,7 @@ function SwapLink({ prompt, href, label }: { prompt: string; href: string; label
 
 export function LoginForm({ next, notice }: { next: string; notice?: string }) {
   const [state, formAction] = useActionState(signIn, EMPTY_STATE)
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
   return (
@@ -203,7 +218,8 @@ export function LoginForm({ next, notice }: { next: string; notice?: string }) {
           autoComplete="email"
           autoFocus
           placeholder="you@company.com"
-          defaultValue={state.values.email}
+          value={email}
+          onValueChange={setEmail}
           error={state.fieldErrors.email}
         />
 
@@ -312,6 +328,8 @@ function CheckEmail({ email }: { email: string }) {
 
 export function SignupForm({ next }: { next: string }) {
   const [state, formAction] = useActionState(signUp, EMPTY_STATE)
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const meterId = useId()
 
@@ -340,7 +358,8 @@ export function SignupForm({ next }: { next: string }) {
           autoFocus
           placeholder="Ada Lovelace"
           maxLength={80}
-          defaultValue={state.values.fullName}
+          value={fullName}
+          onValueChange={setFullName}
           error={state.fieldErrors.fullName}
         />
 
@@ -351,7 +370,8 @@ export function SignupForm({ next }: { next: string }) {
           inputMode="email"
           autoComplete="email"
           placeholder="you@company.com"
-          defaultValue={state.values.email}
+          value={email}
+          onValueChange={setEmail}
           error={state.fieldErrors.email}
         />
 

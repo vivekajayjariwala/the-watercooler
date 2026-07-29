@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { cache } from 'react'
 import { createClient } from '@/utils/supabase/server'
 import type { ChatStatus, CoffeeChat, Message, Profile } from '@/lib/types'
 
@@ -133,8 +134,14 @@ export interface ThreadData {
   isInitiator: boolean
 }
 
-/** A single thread with its participants and message history. */
-export async function getThread(
+/**
+ * A single thread with its participants and message history.
+ *
+ * Cached because `/chats/[id]` reads it twice per request — once in
+ * `generateMetadata` to title the tab, once to render — and Supabase queries
+ * aren't `fetch`, so Next won't dedupe them on its own.
+ */
+export const getThread = cache(async function getThread(
   chatId: string,
   userId: string
 ): Promise<ThreadData | null> {
@@ -177,7 +184,7 @@ export async function getThread(
     messages: (messages ?? []) as Message[],
     isInitiator,
   }
-}
+})
 
 /** Human label for a chat's state, from the viewer's perspective. */
 export function statusLabel(status: ChatStatus, isInitiator: boolean): string {

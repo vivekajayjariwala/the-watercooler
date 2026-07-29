@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { cache } from 'react'
 import { createClient } from '@/utils/supabase/server'
 import type { CoffeeChat, Interest, MatchResult, Profile } from '@/lib/types'
 
@@ -105,14 +106,20 @@ export async function countOpenToMatching(excludeUserId: string): Promise<number
   return count ?? 0
 }
 
-/** A single profile, or `null` when the id doesn't exist. */
-export async function getProfileById(id: string): Promise<Profile | null> {
+/**
+ * A single profile, or `null` when the id doesn't exist.
+ *
+ * Cached because `/people/[id]` reads it twice per request — once in
+ * `generateMetadata` for the title, once in the page — and Supabase queries
+ * aren't `fetch`, so Next won't dedupe them on its own.
+ */
+export const getProfileById = cache(async (id: string): Promise<Profile | null> => {
   const supabase = await createClient()
 
   const { data } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle()
 
   return (data as Profile | null) ?? null
-}
+})
 
 /** The live request between two people, in either direction. */
 export async function getOpenChatBetween(

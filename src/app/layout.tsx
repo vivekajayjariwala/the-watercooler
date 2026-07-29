@@ -27,6 +27,11 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${GeistSans.variable} ${GeistMono.variable}`}
+      // `globals.css` sets `scroll-behavior: smooth` on this element, which
+      // would otherwise animate every route change's scroll restoration.
+      // Declaring it here lets Next jump instantly on navigation and keeps
+      // the smooth behaviour for in-page anchors, where it was the point.
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <body className="min-h-dvh bg-background text-foreground">

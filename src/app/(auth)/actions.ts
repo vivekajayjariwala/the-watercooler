@@ -23,7 +23,11 @@ export interface AuthActionState {
   formError: string | null
   /** Keyed by the input's `name`, so the field can own its own message. */
   fieldErrors: Partial<Record<AuthField, string>>
-  /** Echoed back so a failed submit never wipes what was typed. */
+  /**
+   * Echoed back for the `check_email` screen, which has to name the address
+   * after the form itself has unmounted. Repopulating a failed submit is the
+   * client's job — the inputs are controlled.
+   */
   values: { fullName: string; email: string }
 }
 
@@ -184,6 +188,27 @@ export async function signUp(
       return fail(values, { password: error.message })
     }
     return fail(values, {}, error.message)
+  }
+
+  /**
+   * The signup that isn't one.
+   *
+   * When the address already belongs to a *confirmed* account, Supabase will
+   * not say so — telling an anonymous caller which emails are registered is a
+   * user-enumeration oracle. It returns 200, no error, a decoy user, and sends
+   * no email. The only tell is an empty `identities` array.
+   *
+   * Without this check the person is sent to "check your inbox" to wait for a
+   * message that was never sent. We are not leaking anything by being honest:
+   * they just proved they can authenticate as this address, or they can't, and
+   * either way the sign-in page is where they need to be.
+   *
+   * An existing *unconfirmed* account is a different case — Supabase resends
+   * the confirmation there and returns real identities, so it falls through to
+   * the `check_email` branch below, which is correct.
+   */
+  if (data.user && data.user.identities?.length === 0) {
+    return fail(values, { email: 'There’s already an account on this email. Sign in instead.' })
   }
 
   // Email confirmation is on: there is a user but no session yet.

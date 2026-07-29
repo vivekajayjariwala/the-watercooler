@@ -82,6 +82,45 @@ export function buildIcs({
   return lines.join('\r\n')
 }
 
+/**
+ * A Google Calendar "add event" URL.
+ *
+ * Google's event-template endpoint takes the window as two UTC stamps joined
+ * by a slash, in the same basic-format the .ics uses — so `toUtcStamp` covers
+ * both and the two paths can't drift apart on the time itself. `ctz` is
+ * deliberately omitted: the stamps are already absolute, and passing a zone
+ * alongside them is how events land an offset off.
+ *
+ * This opens a prefilled compose screen, it does not write anything. The user
+ * still has to press save, which is the right amount of consent for a link.
+ */
+export function googleCalendarUrl({
+  start,
+  durationMinutes,
+  title,
+  description,
+  location,
+}: {
+  start: Date
+  durationMinutes: number
+  title: string
+  description?: string
+  location?: string
+}): string {
+  const end = new Date(start.getTime() + durationMinutes * 60_000)
+
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: title,
+    dates: `${toUtcStamp(start)}/${toUtcStamp(end)}`,
+  })
+
+  if (description) params.set('details', description)
+  if (location) params.set('location', location)
+
+  return `https://calendar.google.com/calendar/render?${params}`
+}
+
 /** Triggers a download of the given event. Browser only. */
 export function downloadIcs(filename: string, content: string): void {
   const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' })

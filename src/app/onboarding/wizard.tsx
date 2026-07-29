@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SubmitButton } from '@/components/kit/submit-button'
 import { InterestTag } from '@/components/kit/interest-tag'
+import { useHydrated } from '@/lib/use-hydrated'
 import { cn } from '@/lib/utils'
 import type { ChatPreference, Interest, InterestCategory } from '@/lib/types'
 import {
@@ -152,13 +153,23 @@ export function Wizard({
   const [step, setStep] = useState(0)
   const [draft, setDraft] = useState<OnboardingDraft>(initial)
   const [localErrors, setLocalErrors] = useState<Partial<Record<OnboardingField, string>>>({})
-  const [timezone, setTimezone] = useState('')
   const [restored, setRestored] = useState(false)
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   const storageKey = `watercooler:onboarding:${userId}`
 
+  // Read on the client only: the server has no business guessing where someone
+  // is, and rendering a guess would just be a hydration mismatch.
+  const hydrated = useHydrated()
+  const timezone = hydrated ? (Intl.DateTimeFormat().resolvedOptions().timeZone ?? '') : ''
+
   // Restore a draft left behind by a refresh.
+  //
+  // This has to be an effect: `sessionStorage` doesn't exist during SSR, and
+  // seeding the state lazily instead would hand React different markup than it
+  // rendered on the server. The lint rule below is right in general and wrong
+  // here — the effect is reading an external store, not chasing a render.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     try {
       const raw = window.sessionStorage.getItem(storageKey)
@@ -174,6 +185,7 @@ export function Wizard({
     }
     setRestored(true)
   }, [storageKey])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!restored) return
@@ -184,16 +196,14 @@ export function Wizard({
     }
   }, [draft, step, restored, storageKey])
 
-  useEffect(() => {
-    setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone ?? '')
-  }, [])
-
   // The server found something the client missed — take the person to it.
-  useEffect(() => {
-    if (state.status === 'error' && state.errorStep !== null) {
-      setStep(state.errorStep)
-    }
-  }, [state])
+  // Adjusting during render rather than in an effect means the offending step
+  // is what paints; an effect would flash the last step first.
+  const [seenState, setSeenState] = useState(state)
+  if (seenState !== state) {
+    setSeenState(state)
+    if (state.status === 'error' && state.errorStep !== null) setStep(state.errorStep)
+  }
 
   const errors = useMemo(
     () => ({ ...state.fieldErrors, ...localErrors }),

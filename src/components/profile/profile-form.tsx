@@ -41,6 +41,18 @@ const PROMPTS = [
   { name: 'funFact', label: 'Fun fact', hint: 'Optional, but it starts conversations.', rows: 2 },
 ] as const
 
+type TextValues = {
+  fullName: string
+  headline: string
+  department: string
+  location: string
+  pronouns: string
+  bio: string
+  workingOn: string
+  curiousAbout: string
+  funFact: string
+}
+
 export function ProfileForm({
   profile,
   interests,
@@ -53,6 +65,28 @@ export function ProfileForm({
   const [state, formAction] = useActionState(updateProfile, PROFILE_IDLE)
   const [selected, setSelected] = useState<Set<string>>(new Set(selectedIds))
   const [preference, setPreference] = useState<ChatPreference>(profile.chat_preference)
+
+  // Controlled, like every other input in this form.
+  //
+  // Two reasons, both about what happens after submit: React clears
+  // uncontrolled inputs once a form action resolves, so a rejected save would
+  // otherwise wipe the draft; and a successful save revalidates `/profile`,
+  // handing this component a new `profile` prop — a moving `defaultValue`,
+  // which Base UI warns about.
+  const [values, setValues] = useState<TextValues>(() => ({
+    fullName: profile.full_name ?? '',
+    headline: profile.headline ?? '',
+    department: profile.department ?? '',
+    location: profile.location ?? '',
+    pronouns: profile.pronouns ?? '',
+    bio: profile.bio ?? '',
+    workingOn: profile.working_on ?? '',
+    curiousAbout: profile.curious_about ?? '',
+    funFact: profile.fun_fact ?? '',
+  }))
+
+  const setValue = (field: keyof TextValues) => (next: string) =>
+    setValues((current) => ({ ...current, [field]: next }))
 
   useEffect(() => {
     if (state.status === 'success' && state.message) toast.success(state.message)
@@ -82,11 +116,42 @@ export function ProfileForm({
         <h2 className="label-mono">Basics</h2>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Full name" name="fullName" defaultValue={profile.full_name ?? ''} error={error('fullName')} required />
-          <Field label="Role" name="headline" defaultValue={profile.headline ?? ''} placeholder="Staff Design Engineer" />
-          <Field label="Team" name="department" defaultValue={profile.department ?? ''} placeholder="Design" />
-          <Field label="Location" name="location" defaultValue={profile.location ?? ''} placeholder="Toronto, ON" />
-          <Field label="Pronouns" name="pronouns" defaultValue={profile.pronouns ?? ''} placeholder="they/them" />
+          <Field
+            label="Full name"
+            name="fullName"
+            value={values.fullName}
+            onValueChange={setValue('fullName')}
+            error={error('fullName')}
+            required
+          />
+          <Field
+            label="Role"
+            name="headline"
+            value={values.headline}
+            onValueChange={setValue('headline')}
+            placeholder="Staff Design Engineer"
+          />
+          <Field
+            label="Team"
+            name="department"
+            value={values.department}
+            onValueChange={setValue('department')}
+            placeholder="Design"
+          />
+          <Field
+            label="Location"
+            name="location"
+            value={values.location}
+            onValueChange={setValue('location')}
+            placeholder="Toronto, ON"
+          />
+          <Field
+            label="Pronouns"
+            name="pronouns"
+            value={values.pronouns}
+            onValueChange={setValue('pronouns')}
+            placeholder="they/them"
+          />
         </div>
       </section>
 
@@ -111,17 +176,8 @@ export function ProfileForm({
                 id={prompt.name}
                 name={prompt.name}
                 rows={prompt.rows}
-                defaultValue={
-                  (profile[
-                    prompt.name === 'workingOn'
-                      ? 'working_on'
-                      : prompt.name === 'curiousAbout'
-                        ? 'curious_about'
-                        : prompt.name === 'funFact'
-                          ? 'fun_fact'
-                          : 'bio'
-                  ] as string | null) ?? ''
-                }
+                value={values[prompt.name]}
+                onChange={(event) => setValue(prompt.name)(event.target.value)}
                 className="resize-none"
               />
             </div>
@@ -224,14 +280,16 @@ export function ProfileForm({
 function Field({
   label,
   name,
-  defaultValue,
+  value,
+  onValueChange,
   placeholder,
   error,
   required,
 }: {
   label: string
   name: string
-  defaultValue: string
+  value: string
+  onValueChange: (next: string) => void
   placeholder?: string
   error?: string
   required?: boolean
@@ -244,7 +302,8 @@ function Field({
       <Input
         id={name}
         name={name}
-        defaultValue={defaultValue}
+        value={value}
+        onChange={(event) => onValueChange(event.target.value)}
         placeholder={placeholder}
         required={required}
         aria-invalid={Boolean(error)}

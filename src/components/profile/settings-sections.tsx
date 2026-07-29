@@ -21,6 +21,7 @@ import {
   updateTimezone,
   type SettingsState,
 } from '@/app/(app)/settings/actions'
+import { useHydrated } from '@/lib/use-hydrated'
 import { cn } from '@/lib/utils'
 import type { ChatPreference } from '@/lib/types'
 
@@ -187,8 +188,8 @@ export function TimezoneSettings({ timezone }: { timezone: string }) {
 
 export function AppearanceSettings() {
   const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  // Until hydration, no option is marked active — the server can't know which.
+  const hydrated = useHydrated()
 
   const options = [
     { value: 'light', label: 'Light' },
@@ -201,7 +202,7 @@ export function AppearanceSettings() {
       <p className="text-sm font-medium">Theme</p>
       <div className="flex flex-wrap gap-1.5">
         {options.map((option) => {
-          const active = mounted && theme === option.value
+          const active = hydrated && theme === option.value
           return (
             <button
               key={option.value}
